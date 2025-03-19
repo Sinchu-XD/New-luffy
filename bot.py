@@ -29,11 +29,15 @@ Bot = Client(
     api_hash=Config.API_HASH
 )
 
-@Bot.on_message(filters.private)
+# Middleware to restrict bot access to BOT_ADMINS only
+def admin_filter(_, __, message: Message):
+    return message.from_user.id in Config.BOT_ADMINS
+
+@Bot.on_message(filters.private & filters.create(admin_filter))
 async def user_status_handler(bot: Client, cmd: Message):
     await handle_user_status(bot, cmd)
 
-@Bot.on_message(filters.command("start") & filters.private)
+@Bot.on_message(filters.command("start") & filters.private & filters.create(admin_filter))
 async def start(bot: Client, cmd: Message):
     if cmd.from_user.id in Config.BANNED_USERS:
         await cmd.reply_text("🚫 Sorry, you are banned.")
@@ -73,7 +77,7 @@ async def start(bot: Client, cmd: Message):
         except Exception as err:
             await cmd.reply_text(f"⚠️ **Error:** `{err}`")
 
-@Bot.on_message((filters.document | filters.video | filters.audio | filters.photo) & ~filters.chat(Config.DB_CHANNEL))
+@Bot.on_message((filters.document | filters.video | filters.audio | filters.photo) & ~filters.chat(Config.DB_CHANNEL) & filters.create(admin_filter))
 async def main(bot: Client, message: Message):
     if message.chat.type == enums.ChatType.PRIVATE:
         await add_user_to_database(bot, message)
@@ -114,7 +118,7 @@ async def main(bot: Client, message: Message):
                 disable_web_page_preview=True
             )
 
-@Bot.on_callback_query()
+@Bot.on_callback_query(filters.create(admin_filter))
 async def button(bot: Client, cmd: CallbackQuery):
     cb_data = cmd.data
 
@@ -132,31 +136,10 @@ async def button(bot: Client, cmd: CallbackQuery):
         except Exception as e:
             await cmd.answer(f"⚠️ Cannot Ban!\n\nError: {e}", show_alert=True)
 
-    elif cb_data == "getBatchLink":
-        message_ids = MediaList.get(str(cmd.from_user.id), None)
-        if not message_ids:
-            await cmd.answer("⚠️ Batch List is Empty!", show_alert=True)
-            return
-        await cmd.message.edit("🔄 Generating batch link ...")
-        await save_batch_media_in_channel(bot, cmd.message, message_ids)
-        MediaList[str(cmd.from_user.id)] = []
-
-    elif cb_data == "addToBatchTrue":
-        if MediaList.get(str(cmd.from_user.id)) is None:
-            MediaList[str(cmd.from_user.id)] = []
-        file_id = cmd.message.reply_to_message.id
-        MediaList[str(cmd.from_user.id)].append(file_id)
-        await cmd.message.edit(
-            "✅ File Added to Batch!\n\nClick below to get batch link.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("📎 Get Batch Link", callback_data="getBatchLink")],
-                [InlineKeyboardButton("❌ Close", callback_data="closeMessage")]
-            ])
-        )
-
     try:
         await cmd.answer()
     except QueryIdInvalid:
         pass
 
 Bot.run()
+            

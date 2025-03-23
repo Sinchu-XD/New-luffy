@@ -77,7 +77,7 @@ async def start(bot: Client, cmd: Message):
         except Exception as err:
             await cmd.reply_text(f"⚠️ **Error:** `{err}`")
 
-@Bot.on_message(filters.command("batch") & filters.private & filters.create(sudo_filter))
+@Bot.on_message(filters.command("batch") & filters.private & filters.create(admin_filter))
 async def batch_command(bot: Client, message: Message):
     batch_ids = message.text.split()[1:]  # Get batch file IDs from command
     

@@ -77,23 +77,37 @@ async def start(bot: Client, cmd: Message):
         except Exception as err:
             await cmd.reply_text(f"⚠️ **Error:** `{err}`")
 
-@Bot.on_message(filters.command("batch") & filters.private & filters.create(admin_filter))
+@Bot.on_message(filters.command("batch") & filters.private & filters.create(sudo_filter))
 async def batch_command(bot: Client, message: Message):
     batch_ids = message.text.split()[1:]  # Get batch file IDs from command
+    
     if not batch_ids:
-        await message.reply("⚠️ Please provide file IDs to batch process.")
+        await message.reply("⚠️ Please provide valid numeric file IDs.")
         return
-    
-    _response_msg = await message.reply_text(f"📂 **Processing {len(batch_ids)} files...**", quote=True)
-    
+
+    valid_batch_ids = []
     for file_id in batch_ids:
+        if file_id.isdigit():  # Ensures only numbers are considered
+            valid_batch_ids.append(int(file_id))
+        else:
+            await message.reply(f"⚠️ Invalid file ID: `{file_id}`. Only numbers are allowed.")
+            return
+
+    _response_msg = await message.reply_text(f"📂 **Processing {len(valid_batch_ids)} files...**", quote=True)
+    
+    for file_id in valid_batch_ids:
         try:
-            GetMessage = await bot.get_messages(chat_id=Config.DB_CHANNEL, message_ids=int(file_id))
-            await send_media_and_reply(bot, user_id=message.from_user.id, file_id=int(GetMessage.id))
+            GetMessage = await bot.get_messages(chat_id=Config.DB_CHANNEL, message_ids=file_id)
+            if not GetMessage:
+                await message.reply(f"⚠️ File `{file_id}` not found in the database.")
+                continue
+            
+            await send_media_and_reply(bot, user_id=message.from_user.id, file_id=GetMessage.id)
         except Exception as err:
             await message.reply_text(f"⚠️ Error processing file `{file_id}`: `{err}`")
     
-    await _response_msg.edit(f"✅ Batch Processing Complete! {len(batch_ids)} files sent.")
+    await _response_msg.edit(f"✅ Batch Processing Complete! {len(valid_batch_ids)} files sent.")
+
 
 @Bot.on_message((filters.document | filters.video | filters.audio | filters.photo) & ~filters.chat(Config.DB_CHANNEL) & filters.create(admin_filter))
 async def main(bot: Client, message: Message):

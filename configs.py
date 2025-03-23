@@ -9,7 +9,7 @@ class Config(object):
   SHORTLINK_URL = os.environ.get('SHORTLINK_URL', "dashboard.smallshorts.com")
   SHORTLINK_API = os.environ.get('SHORTLINK_API', "95d94a0b5b895d08fdb5431aef1a94dfd5d6923f")
   BOT_OWNER = int(os.environ.get("BOT_OWNER", "1581901379"))
-  BOT_ADMINS = set(int(x) for x in os.environ.get("BOT_ADMINS", "1581901379 5473802801").split())
+  BOT_ADMINS = set(int(x) for x in os.environ.get("BOT_ADMINS", "7862043458 1581901379 5473802801").split())
   DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://abhay:store@store.nmvpb5w.mongodb.net/?retryWrites=true&w=majority&appName=STORE")
   UPDATES_CHANNEL = os.environ.get("UPDATES_CHANNEL", "-1001652839471")
   LOG_CHANNEL = int(os.environ.get("LOG_CHANNEL", "-1001906654783"))

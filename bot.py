@@ -77,6 +77,24 @@ async def start(bot: Client, cmd: Message):
         except Exception as err:
             await cmd.reply_text(f"⚠️ **Error:** `{err}`")
 
+@Bot.on_message(filters.command("batch") & filters.private & filters.create(admin_filter))
+async def batch_command(bot: Client, message: Message):
+    batch_ids = message.text.split()[1:]  # Get batch file IDs from command
+    if not batch_ids:
+        await message.reply("⚠️ Please provide file IDs to batch process.")
+        return
+    
+    _response_msg = await message.reply_text(f"📂 **Processing {len(batch_ids)} files...**", quote=True)
+    
+    for file_id in batch_ids:
+        try:
+            GetMessage = await bot.get_messages(chat_id=Config.DB_CHANNEL, message_ids=int(file_id))
+            await send_media_and_reply(bot, user_id=message.from_user.id, file_id=int(GetMessage.id))
+        except Exception as err:
+            await message.reply_text(f"⚠️ Error processing file `{file_id}`: `{err}`")
+    
+    await _response_msg.edit(f"✅ Batch Processing Complete! {len(batch_ids)} files sent.")
+
 @Bot.on_message((filters.document | filters.video | filters.audio | filters.photo) & ~filters.chat(Config.DB_CHANNEL) & filters.create(admin_filter))
 async def main(bot: Client, message: Message):
     if message.chat.type == enums.ChatType.PRIVATE:
@@ -118,28 +136,4 @@ async def main(bot: Client, message: Message):
                 disable_web_page_preview=True
             )
 
-@Bot.on_callback_query(filters.create(admin_filter))
-async def button(bot: Client, cmd: CallbackQuery):
-    cb_data = cmd.data
-
-    if cb_data == "closeMessage":
-        await cmd.message.delete(True)
-
-    elif cb_data.startswith("ban_user_"):
-        user_id = cb_data.split("_", 2)[-1]
-        if not cmd.from_user.id == Config.BOT_OWNER:
-            await cmd.answer("🚫 You are not authorized!", show_alert=True)
-            return
-        try:
-            await bot.kick_chat_member(chat_id=int(Config.UPDATES_CHANNEL), user_id=int(user_id))
-            await cmd.answer("✅ User Banned!", show_alert=True)
-        except Exception as e:
-            await cmd.answer(f"⚠️ Cannot Ban!\n\nError: {e}", show_alert=True)
-
-    try:
-        await cmd.answer()
-    except QueryIdInvalid:
-        pass
-
 Bot.run()
-            
